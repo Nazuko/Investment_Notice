@@ -56,7 +56,10 @@
       <tbody>
         {% for row in rows %}
         <tr data-symbol="{{ row.position.symbol }}" data-avg-cost="{{ row.position.avg_cost }}">
-          <td class="sym">{{ row.position.symbol }}</td>
+          <td>
+            <div class="name">{{ row.name }}</div>
+            <div class="code">{{ row.position.symbol }}</div>
+          </td>
           <td>{{ row.position.qty }}</td>
           <td>{{ row.position.avg_cost }}</td>
           <td class="price">…</td>
@@ -75,7 +78,13 @@
     </table>
 
     <form class="grid" method="post" action="{{ url_for('add_position') }}" id="add-position-form" autocomplete="off">
-      <label>標的 <input id="position-symbol" name="position_symbol" placeholder="2330.TW" required></label>
+      <label class="picker-field">標的
+        <div class="combo" data-combo>
+          <input type="text" class="combo-query" id="position-symbol-query" placeholder="輸入代號或中文名稱" autocomplete="off">
+          <input type="hidden" name="position_symbol" class="combo-yahoo" id="position-symbol">
+          <ul class="combo-list" role="listbox" hidden></ul>
+        </div>
+      </label>
       <label>數量 <input id="position-qty" name="qty" type="number" step="any" min="0" required></label>
       <label>購入均價 <input id="position-cost" name="avg_cost" type="number" step="any" min="0" required></label>
       <label>備註 <input id="position-note" name="position_note" placeholder="選填"></label>
@@ -90,13 +99,16 @@
         <tr><th>標的</th><th>現價</th><th>備註</th><th></th></tr>
       </thead>
       <tbody>
-        {% for item in watch %}
-        <tr data-symbol="{{ item.symbol }}">
-          <td class="sym">{{ item.symbol }}</td>
-          <td class="price">…</td>
-          <td>{{ item.note }}</td>
+        {% for row in watch %}
+        <tr data-symbol="{{ row.item.symbol }}">
           <td>
-            <form method="post" action="{{ url_for('delete_watch', symbol=item.symbol) }}">
+            <div class="name">{{ row.name }}</div>
+            <div class="code">{{ row.item.symbol }}</div>
+          </td>
+          <td class="price">…</td>
+          <td>{{ row.item.note }}</td>
+          <td>
+            <form method="post" action="{{ url_for('delete_watch', symbol=row.item.symbol) }}">
               <button type="submit" class="danger">移除</button>
             </form>
           </td>
@@ -107,7 +119,13 @@
       </tbody>
     </table>
     <form class="grid" method="post" action="{{ url_for('add_watch') }}" id="add-watch-form" autocomplete="off">
-      <label>標的 <input id="watch-symbol" name="watch_symbol" placeholder="AAPL" required></label>
+      <label class="picker-field">標的
+        <div class="combo" data-combo>
+          <input type="text" class="combo-query" id="watch-symbol-query" placeholder="輸入代號或中文名稱" autocomplete="off">
+          <input type="hidden" name="watch_symbol" class="combo-yahoo" id="watch-symbol">
+          <ul class="combo-list" role="listbox" hidden></ul>
+        </div>
+      </label>
       <label>備註 <input id="watch-note" name="watch_note" placeholder="選填"></label>
       <button type="submit" class="primary">加入監控</button>
     </form>
@@ -124,7 +142,10 @@
         <tr>
           <td>{{ a.sent_at }}</td>
           <td class="{{ a.side }}">{{ '買入' if a.side == 'buy' else '賣出' }}</td>
-          <td class="sym">{{ a.symbol }}</td>
+          <td>
+            <div class="name">{{ a.name }}</div>
+            <div class="code">{{ a.symbol }}</div>
+          </td>
           <td>{{ a.price }}</td>
           <td>{{ a.rule_id }}</td>
           <td>{{ a.reason }}</td>

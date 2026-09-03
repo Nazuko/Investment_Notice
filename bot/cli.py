@@ -82,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("run-once", help="Fetch prices, evaluate strategies, notify")
     sub.add_parser("serve", help="Run on an interval from settings.yaml")
+    sub.add_parser("refresh-symbols", help="Rebuild the Taiwan stock name catalog")
     web = sub.add_parser("web", help="Open a browser UI for holdings and alerts")
     web.add_argument("--host", default="0.0.0.0")
     web.add_argument("--port", type=int, default=5000)
@@ -94,6 +95,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "serve":
         serve(load_settings(), _run_once)
+        return 0
+    if args.cmd == "refresh-symbols":
+        from bot.refresh_symbols import refresh
+        from bot.symbols import load_catalog
+
+        dest = refresh()
+        load_catalog.cache_clear()
+        print(f"Wrote {dest}")
         return 0
     if args.cmd == "web":
         from bot.web import run_server

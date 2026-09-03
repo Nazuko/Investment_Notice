@@ -30,7 +30,13 @@ python -m bot holdings remove AAPL
 python -m bot web
 ```
 
-Then open `http://127.0.0.1:5000` in the Cursor Browser panel. You can add/remove holdings and watchlist names, see price vs cost, and click **立即檢查訊號**.
+Then open `http://127.0.0.1:5000` in the Cursor Browser panel. Holdings and watchlist pickers search Taiwan listed/OTC names (代號 + 中文名稱). Tables show the Chinese name, with the Yahoo ticker underneath.
+
+Refresh the bundled catalog:
+
+```bash
+python -m bot refresh-symbols
+```
 
 ## Run (CLI)
 

@@ -10,6 +10,7 @@ from bot.config import database_path, load_settings
 from bot.engine import build_runtime, run_tick
 from bot.holdings import HoldingsStore
 from bot.prices import PriceProvider, make_price_provider
+from bot.symbols import lookup, name_for, search as search_symbols
 
 
 def create_app(
@@ -57,18 +58,59 @@ def create_app(
     def index():
         positions = store.list_positions()
         watch = store.list_watchlist()
-        rows = [{"position": p} for p in positions]
+        rows = [
+            {
+                "position": p,
+                "name": name_for(p.symbol, fallback=p.note or p.symbol),
+            }
+            for p in positions
+        ]
+        watch_rows = [
+            {
+                "item": item,
+                "name": name_for(item.symbol, fallback=item.note or item.symbol),
+            }
+            for item in watch
+        ]
+        alerts = []
+        for a in alert_log.list_recent():
+            row = dict(a)
+            row["name"] = name_for(a["symbol"], fallback=a["symbol"])
+            alerts.append(row)
         return render_template(
             "index.html",
             rows=rows,
-            watch=watch,
-            alerts=alert_log.list_recent(),
+            watch=watch_rows,
+            alerts=alerts,
             settings=cfg,
         )
 
     @app.get("/api/quotes")
     def api_quotes():
         return jsonify(_quotes(_symbols()))
+
+    @app.get("/api/symbols")
+    def api_symbols():
+        q = (request.args.get("q") or "").strip()
+        items = search_symbols(q, limit=20)
+        return jsonify(
+            [
+                {
+                    "code": item.code,
+                    "name": item.name,
+                    "yahoo": item.yahoo,
+                    "market": item.market,
+                    "label": f"{item.code}  {item.name}",
+                }
+                for item in items
+            ]
+        )
+
+    def _require_tw_symbol(raw: str):
+        item = lookup(raw)
+        if item:
+            return item
+        return None
 
     @app.post("/positions")
     def add_position():
@@ -79,10 +121,14 @@ def create_app(
         if not symbol or qty in (None, "") or avg_cost in (None, ""):
             flash("請填寫標的、數量與購入均價。", "error")
             return redirect(url_for("index"))
+        item = _require_tw_symbol(symbol)
+        if not item:
+            flash("請從清單選擇台股。", "error")
+            return redirect(url_for("index"))
         try:
-            store.upsert_position(symbol, float(qty), float(avg_cost), note)
+            store.upsert_position(item.yahoo, float(qty), float(avg_cost), note)
             store.export_yaml()
-            flash(f"已記錄 {symbol.upper()}。", "ok")
+            flash(f"已記錄 {item.name}（{item.yahoo}）。", "ok")
         except ValueError:
             flash("數量與購入均價必須是數字。", "error")
         return redirect(url_for("index"))
@@ -91,7 +137,7 @@ def create_app(
     def delete_position(symbol: str):
         if store.remove_position(symbol):
             store.export_yaml()
-            flash(f"已移除庫存 {symbol.upper()}。", "ok")
+            flash(f"已移除庫存 {name_for(symbol, fallback=symbol.upper())}。", "ok")
         else:
             flash(f"找不到 {symbol.upper()}。", "error")
         return redirect(url_for("index"))
@@ -100,19 +146,20 @@ def create_app(
     def add_watch():
         symbol = (request.form.get("watch_symbol") or request.form.get("symbol") or "").strip()
         note = (request.form.get("watch_note") or request.form.get("note") or "").strip()
-        if not symbol:
-            flash("請填寫監控標的。", "error")
+        item = _require_tw_symbol(symbol)
+        if not item:
+            flash("請從清單選擇台股。", "error")
             return redirect(url_for("index"))
-        store.upsert_watch(symbol, note)
+        store.upsert_watch(item.yahoo, note)
         store.export_yaml()
-        flash(f"已加入監控 {symbol.upper()}。", "ok")
+        flash(f"已加入監控 {item.name}（{item.yahoo}）。", "ok")
         return redirect(url_for("index"))
 
     @app.post("/watchlist/<symbol>/delete")
     def delete_watch(symbol: str):
         if store.remove_watch(symbol):
             store.export_yaml()
-            flash(f"已移除監控 {symbol.upper()}。", "ok")
+            flash(f"已移除監控 {name_for(symbol, fallback=symbol.upper())}。", "ok")
         else:
             flash(f"找不到監控 {symbol.upper()}。", "error")
         return redirect(url_for("index"))
