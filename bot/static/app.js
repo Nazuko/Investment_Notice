@@ -64,6 +64,7 @@ function bindCombo(root) {
   function choose(item) {
     yahoo.value = item.yahoo;
     query.value = item.label;
+    query.dataset.selectedLabel = item.label;
     hide();
   }
 
@@ -76,6 +77,7 @@ function bindCombo(root) {
 
   query.addEventListener("input", () => {
     yahoo.value = "";
+    delete query.dataset.selectedLabel;
     clearTimeout(timer);
     timer = setTimeout(() => lookup(query.value), 120);
   });
@@ -103,6 +105,9 @@ function bindCombo(root) {
   });
 
   root.closest("form").addEventListener("submit", (event) => {
+    if (!query.value.trim() || query.value.trim() !== (query.dataset.selectedLabel || "")) {
+      yahoo.value = "";
+    }
     if (!yahoo.value) {
       event.preventDefault();
       query.focus();
