@@ -74,11 +74,11 @@
       </tbody>
     </table>
 
-    <form class="grid" method="post" action="{{ url_for('add_position') }}" id="add-position-form">
-      <label>標的 <input name="symbol" placeholder="2330.TW" required></label>
-      <label>數量 <input name="qty" type="number" step="any" min="0" required></label>
-      <label>購入均價 <input name="avg_cost" type="number" step="any" min="0" required></label>
-      <label>備註 <input name="note" placeholder="選填"></label>
+    <form class="grid" method="post" action="{{ url_for('add_position') }}" id="add-position-form" autocomplete="off">
+      <label>標的 <input id="position-symbol" name="position_symbol" placeholder="2330.TW" required></label>
+      <label>數量 <input id="position-qty" name="qty" type="number" step="any" min="0" required></label>
+      <label>購入均價 <input id="position-cost" name="avg_cost" type="number" step="any" min="0" required></label>
+      <label>備註 <input id="position-note" name="position_note" placeholder="選填"></label>
       <button type="submit" class="primary">新增庫存</button>
     </form>
   </section>
@@ -106,9 +106,9 @@
         {% endfor %}
       </tbody>
     </table>
-    <form class="grid" method="post" action="{{ url_for('add_watch') }}" id="add-watch-form">
-      <label>標的 <input name="symbol" placeholder="AAPL" required></label>
-      <label>備註 <input name="note" placeholder="選填"></label>
+    <form class="grid" method="post" action="{{ url_for('add_watch') }}" id="add-watch-form" autocomplete="off">
+      <label>標的 <input id="watch-symbol" name="watch_symbol" placeholder="AAPL" required></label>
+      <label>備註 <input id="watch-note" name="watch_note" placeholder="選填"></label>
       <button type="submit" class="primary">加入監控</button>
     </form>
   </section>

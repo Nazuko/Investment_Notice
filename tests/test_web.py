@@ -33,7 +33,7 @@ def test_dashboard_and_add_position(tmp_path: Path) -> None:
 
     added = client.post(
         "/positions",
-        data={"symbol": "2330.TW", "qty": "1000", "avg_cost": "580", "note": "台積電"},
+        data={"position_symbol": "2330.TW", "qty": "1000", "avg_cost": "580", "position_note": "台積電"},
         follow_redirects=True,
     )
     assert added.status_code == 200
@@ -46,7 +46,7 @@ def test_dashboard_and_add_position(tmp_path: Path) -> None:
 
 def test_watchlist_and_run(tmp_path: Path) -> None:
     client = _client(tmp_path)
-    client.post("/watchlist", data={"symbol": "AAPL", "note": "watch"})
+    client.post("/watchlist", data={"watch_symbol": "AAPL", "watch_note": "watch"})
     page = client.get("/")
     assert b"AAPL" in page.data
     ran = client.post("/run", follow_redirects=True)
@@ -56,7 +56,7 @@ def test_watchlist_and_run(tmp_path: Path) -> None:
 
 def test_delete_position(tmp_path: Path) -> None:
     client = _client(tmp_path)
-    client.post("/positions", data={"symbol": "AAPL", "qty": "1", "avg_cost": "10"})
+    client.post("/positions", data={"position_symbol": "AAPL", "qty": "1", "avg_cost": "10"})
     deleted = client.post("/positions/AAPL/delete", follow_redirects=True)
     assert "已移除庫存 AAPL".encode("utf-8") in deleted.data
     assert "尚無庫存".encode("utf-8") in deleted.data

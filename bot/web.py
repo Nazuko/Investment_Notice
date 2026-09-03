@@ -72,11 +72,11 @@ def create_app(
 
     @app.post("/positions")
     def add_position():
-        symbol = (request.form.get("symbol") or "").strip()
+        symbol = (request.form.get("position_symbol") or request.form.get("symbol") or "").strip()
         qty = request.form.get("qty")
         avg_cost = request.form.get("avg_cost")
-        note = (request.form.get("note") or "").strip()
-        if not symbol or qty is None or avg_cost is None:
+        note = (request.form.get("position_note") or request.form.get("note") or "").strip()
+        if not symbol or qty in (None, "") or avg_cost in (None, ""):
             flash("請填寫標的、數量與購入均價。", "error")
             return redirect(url_for("index"))
         try:
@@ -98,8 +98,8 @@ def create_app(
 
     @app.post("/watchlist")
     def add_watch():
-        symbol = (request.form.get("symbol") or "").strip()
-        note = (request.form.get("note") or "").strip()
+        symbol = (request.form.get("watch_symbol") or request.form.get("symbol") or "").strip()
+        note = (request.form.get("watch_note") or request.form.get("note") or "").strip()
         if not symbol:
             flash("請填寫監控標的。", "error")
             return redirect(url_for("index"))
