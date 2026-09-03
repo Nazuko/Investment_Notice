@@ -10,8 +10,9 @@ from bot.models import Position, WatchItem
 
 
 class HoldingsStore:
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self, db_path: Path, yaml_path: Path | None = None) -> None:
         self.db_path = db_path
+        self.yaml_path = yaml_path or holdings_yaml_path()
 
     def list_positions(self) -> list[Position]:
         with connect(self.db_path) as conn:
@@ -82,7 +83,7 @@ class HoldingsStore:
             return cur.rowcount > 0
 
     def import_yaml(self, path: Path | None = None) -> None:
-        yaml_path = path or holdings_yaml_path()
+        yaml_path = path or self.yaml_path
         with yaml_path.open(encoding="utf-8") as fh:
             data = yaml.safe_load(fh) or {}
         for item in data.get("positions") or []:
@@ -99,7 +100,7 @@ class HoldingsStore:
             )
 
     def export_yaml(self, path: Path | None = None) -> None:
-        yaml_path = path or holdings_yaml_path()
+        yaml_path = path or self.yaml_path
         payload = {
             "positions": [
                 {

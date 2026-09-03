@@ -82,6 +82,9 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("run-once", help="Fetch prices, evaluate strategies, notify")
     sub.add_parser("serve", help="Run on an interval from settings.yaml")
+    web = sub.add_parser("web", help="Open a browser UI for holdings and alerts")
+    web.add_argument("--host", default="0.0.0.0")
+    web.add_argument("--port", type=int, default=5000)
 
     args = parser.parse_args(argv)
     if args.cmd == "holdings":
@@ -91,6 +94,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "serve":
         serve(load_settings(), _run_once)
+        return 0
+    if args.cmd == "web":
+        from bot.web import run_server
+
+        run_server(host=args.host, port=args.port)
         return 0
     return 1
 

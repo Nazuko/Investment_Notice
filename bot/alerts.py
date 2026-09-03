@@ -42,3 +42,16 @@ class AlertLog:
                 ),
             )
             conn.commit()
+
+    def list_recent(self, limit: int = 50) -> list[dict]:
+        with connect(self.db_path) as conn:
+            rows = conn.execute(
+                """
+                SELECT symbol, side, rule_id, price, reason, sent_at
+                FROM alerts
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]

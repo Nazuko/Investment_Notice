@@ -24,7 +24,15 @@ python -m bot holdings remove AAPL
 
 `add` / `remove` also rewrite `config/holdings.yaml`.
 
-## Run
+## Browser UI
+
+```bash
+python -m bot web
+```
+
+Then open `http://127.0.0.1:5000` in the Cursor Browser panel. You can add/remove holdings and watchlist names, see price vs cost, and click **立即檢查訊號**.
+
+## Run (CLI)
 
 ```bash
 python -m bot run-once    # one tick

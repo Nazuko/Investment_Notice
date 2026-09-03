@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>買賣提醒</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <p class="eyebrow">Investment Notice</p>
+      <h1>買賣提醒工作台</h1>
+    </div>
+    <div class="actions">
+      <form method="post" action="{{ url_for('run') }}">
+        <button type="submit" class="primary" id="run-check">立即檢查訊號</button>
+      </form>
+      <form method="post" action="{{ url_for('reload_yaml') }}">
+        <button type="submit" class="ghost">從 YAML 載入</button>
+      </form>
+    </div>
+  </header>
+
+  <p class="hint">
+    策略：<code>{{ settings.strategies | join(', ') }}</code>
+    · 行情：<code>{{ settings.price_provider }}</code>
+    · 通知：<code>{{ settings.notify.channels | join(', ') }}</code>
+    · 條件檔尚未接入時，檢查不會發出買/賣訊號。
+  </p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <section>
+    <h2>庫存與購入價</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>標的</th>
+          <th>數量</th>
+          <th>購入均價</th>
+          <th>現價</th>
+          <th>損益</th>
+          <th>備註</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr data-symbol="{{ row.position.symbol }}" data-avg-cost="{{ row.position.avg_cost }}">
+          <td class="sym">{{ row.position.symbol }}</td>
+          <td>{{ row.position.qty }}</td>
+          <td>{{ row.position.avg_cost }}</td>
+          <td class="price">…</td>
+          <td class="pnl">…</td>
+          <td>{{ row.position.note }}</td>
+          <td>
+            <form method="post" action="{{ url_for('delete_position', symbol=row.position.symbol) }}">
+              <button type="submit" class="danger">移除</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="empty">尚無庫存，請在下方新增。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <form class="grid" method="post" action="{{ url_for('add_position') }}" id="add-position-form">
+      <label>標的 <input name="symbol" placeholder="2330.TW" required></label>
+      <label>數量 <input name="qty" type="number" step="any" min="0" required></label>
+      <label>購入均價 <input name="avg_cost" type="number" step="any" min="0" required></label>
+      <label>備註 <input name="note" placeholder="選填"></label>
+      <button type="submit" class="primary">新增庫存</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>監控清單（尚未持有、可提醒買入）</h2>
+    <table>
+      <thead>
+        <tr><th>標的</th><th>現價</th><th>備註</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for item in watch %}
+        <tr data-symbol="{{ item.symbol }}">
+          <td class="sym">{{ item.symbol }}</td>
+          <td class="price">…</td>
+          <td>{{ item.note }}</td>
+          <td>
+            <form method="post" action="{{ url_for('delete_watch', symbol=item.symbol) }}">
+              <button type="submit" class="danger">移除</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="empty">尚無監控標的。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form class="grid" method="post" action="{{ url_for('add_watch') }}" id="add-watch-form">
+      <label>標的 <input name="symbol" placeholder="AAPL" required></label>
+      <label>備註 <input name="note" placeholder="選填"></label>
+      <button type="submit" class="primary">加入監控</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>已送出的提醒</h2>
+    <table>
+      <thead>
+        <tr><th>時間</th><th>方向</th><th>標的</th><th>價格</th><th>規則</th><th>原因</th></tr>
+      </thead>
+      <tbody>
+        {% for a in alerts %}
+        <tr>
+          <td>{{ a.sent_at }}</td>
+          <td class="{{ a.side }}">{{ '買入' if a.side == 'buy' else '賣出' }}</td>
+          <td class="sym">{{ a.symbol }}</td>
+          <td>{{ a.price }}</td>
+          <td>{{ a.rule_id }}</td>
+          <td>{{ a.reason }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty">還沒有提醒紀錄。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

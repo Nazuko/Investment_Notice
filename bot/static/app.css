@@ -1,0 +1,114 @@
+:root {
+  --bg: #12110e;
+  --panel: #1c1a16;
+  --line: #3a3428;
+  --text: #f3ead7;
+  --muted: #9a8f78;
+  --gold: #d4a017;
+  --up: #7dcea0;
+  --down: #e07a5f;
+  --danger: #c45c4a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: "Iwanami Mincho", "Source Han Serif TC", "Noto Serif TC", Georgia, serif;
+  background: radial-gradient(1200px 600px at 10% -10%, #2a2418 0%, var(--bg) 55%);
+  color: var(--text);
+  padding: 32px 28px 64px;
+  line-height: 1.45;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+.eyebrow {
+  margin: 0;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--gold);
+}
+h1 { margin: 4px 0 0; font-size: 28px; font-weight: 600; }
+h2 { font-size: 16px; margin: 28px 0 12px; color: var(--gold); font-weight: 600; }
+
+.actions { display: flex; gap: 8px; }
+.hint { color: var(--muted); font-size: 13px; }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--panel);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+.sym { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.empty { color: var(--muted); }
+.up { color: var(--up); }
+.down, .sell { color: var(--down); }
+.buy { color: var(--up); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  align-items: end;
+}
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+input {
+  background: #0e0d0b;
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font: inherit;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+}
+.primary {
+  background: var(--gold);
+  color: #1a1408;
+  border-color: var(--gold);
+  font-weight: 600;
+}
+.ghost { background: transparent; color: var(--text); }
+.danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.flashes { list-style: none; padding: 0; }
+.flashes li {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  margin: 8px 0;
+}
+.flashes .ok { border-color: var(--up); color: var(--up); }
+.flashes .error { border-color: var(--down); color: var(--down); }
