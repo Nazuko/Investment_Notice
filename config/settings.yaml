@@ -1,0 +1,20 @@
+timezone: "Asia/Taipei"
+poll_interval_minutes: 15
+database_path: "data/bot.db"
+
+price_provider: "yfinance"
+
+# Strategy ids loaded from bot.strategies.registry
+strategies:
+  - noop
+
+notify:
+  channels:
+    - console
+    # - email
+  # Dedupe window: same symbol + side + rule_id will not re-send within this many hours
+  dedupe_hours: 24
+
+email:
+  # Recipients can also come from ALERT_EMAIL_TO in .env
+  to: []
