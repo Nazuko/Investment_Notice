@@ -26,7 +26,7 @@ def create_app(
     path = db_path if db_path is not None else database_path(cfg)
     store = HoldingsStore(path, yaml_path=yaml_path)
     if seed_yaml:
-        yaml_file = holdings_yaml_path()
+        yaml_file = store.yaml_path
         if yaml_file.exists() and not store.list_positions() and not store.list_watchlist():
             store.import_yaml(yaml_file)
 
