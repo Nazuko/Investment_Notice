@@ -1,0 +1,6 @@
+# Placeholder only — not loaded until a real Strategy implementation is registered.
+id: example
+enabled: false
+notes: "Replace with uploaded condition files."
+buy: []
+sell: []

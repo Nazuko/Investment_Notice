@@ -1,0 +1,10 @@
+# Current inventory: symbol, quantity, average purchase price.
+# Symbols should match the price provider (Yahoo Finance style: 2330.TW, AAPL).
+positions:
+  - symbol: "2330.TW"
+    qty: 1000
+    avg_cost: 580.0
+    note: "台積電"
+watchlist:
+  - symbol: "AAPL"
+    note: "尚未持有，僅監控買入條件"
