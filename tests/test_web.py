@@ -80,3 +80,42 @@ def test_delete_position(tmp_path: Path) -> None:
     deleted = client.post("/positions/2330.TW/delete", follow_redirects=True)
     assert "已移除庫存 台積電".encode("utf-8") in deleted.data
     assert "尚無庫存".encode("utf-8") in deleted.data
+
+
+def test_personality_pages_and_tabs(tmp_path: Path) -> None:
+    from datetime import date
+
+    from bot.marketdata import BarStore
+
+    client = _client(tmp_path)
+    home = client.get("/")
+    assert "打工型".encode("utf-8") in home.data
+    assert "成長型".encode("utf-8") in home.data
+
+    db = tmp_path / "bot.db"
+    store = BarStore(db)
+    store.save_screen(
+        "worker",
+        "strong_day",
+        date(2026, 9, 3),
+        [
+            {
+                "symbol": "2330.TW",
+                "name": "台積電",
+                "close": 900.0,
+                "turnover": 20_000_000_000,
+                "volume_lots": 20000,
+                "reasons": ["成值>1億"],
+            }
+        ],
+    )
+    page = client.get("/select/worker")
+    assert page.status_code == 200
+    assert "強勢日風箏".encode("utf-8") in page.data
+    assert "拉回日風箏".encode("utf-8") in page.data
+    assert "台積電".encode("utf-8") in page.data
+    other = client.get("/select/worker?skill=pullback_day")
+    assert "這個分頁目前沒有通過條件".encode("utf-8") in other.data
+    soon = client.get("/select/growth/soon")
+    assert soon.status_code == 200
+    assert "講義還沒放到".encode("utf-8") in soon.data

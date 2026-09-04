@@ -9,6 +9,8 @@ from bot.alerts import AlertLog
 from bot.config import database_path, load_settings
 from bot.engine import build_runtime, run_tick
 from bot.holdings import HoldingsStore
+from bot.marketdata import BarStore
+from bot.personalities import load_personas, run_skill
 from bot.prices import PriceProvider, make_price_provider
 from bot.symbols import lookup, name_for, search as search_symbols
 
@@ -39,6 +41,12 @@ def create_app(
     app.config["BOT_STORE"] = store
     app.config["BOT_PRICES"] = prices
     app.config["BOT_ALERTS"] = alert_log
+    bar_store = BarStore(path)
+    personas = load_personas()
+
+    @app.context_processor
+    def inject_nav():
+        return {"personas": personas}
 
     def _quotes(symbols: list[str]) -> dict[str, float | None]:
         out: dict[str, float | None] = {}
@@ -83,6 +91,7 @@ def create_app(
             watch=watch_rows,
             alerts=alerts,
             settings=cfg,
+            nav="holdings",
         )
 
     @app.get("/api/quotes")
@@ -189,6 +198,59 @@ def create_app(
         store.import_yaml()
         flash("已從 holdings.yaml 重新載入。", "ok")
         return redirect(url_for("index"))
+
+    @app.get("/select/<persona_id>")
+    def select_persona(persona_id: str):
+        persona = personas.get(persona_id)
+        if not persona:
+            flash("找不到這個人格。", "error")
+            return redirect(url_for("index"))
+        if not persona.get("enabled"):
+            return redirect(url_for("select_soon", persona_id=persona_id))
+        skills = persona.get("skills") or []
+        skill_id = request.args.get("skill") or (skills[0]["id"] if skills else "")
+        if skill_id not in {s["id"] for s in skills}:
+            skill_id = skills[0]["id"]
+        as_of, rows = bar_store.load_screen(persona_id, skill_id)
+        skill_name = next(s["name"] for s in skills if s["id"] == skill_id)
+        return render_template(
+            "select.html",
+            title=persona["name"],
+            heading=persona["name"],
+            nav=persona_id,
+            persona_id=persona_id,
+            skills=skills,
+            skill_id=skill_id,
+            skill_name=skill_name,
+            rows=rows,
+            as_of=as_of,
+        )
+
+    @app.post("/select/<persona_id>/refresh")
+    def refresh_persona(persona_id: str):
+        persona = personas.get(persona_id)
+        if not persona or not persona.get("enabled"):
+            return redirect(url_for("index"))
+        try:
+            last = None
+            for skill in persona.get("skills") or []:
+                result = run_skill(bar_store, persona_id, skill["id"], refresh=(last is None))
+                last = result.get("as_of") or last
+            flash(f"已用盤後資料更新 {persona['name']}（{last}）。", "ok")
+        except Exception as exc:
+            flash(f"更新失敗：{exc}", "error")
+        return redirect(url_for("select_persona", persona_id=persona_id))
+
+    @app.get("/select/<persona_id>/soon")
+    def select_soon(persona_id: str):
+        persona = personas.get(persona_id) or {"name": persona_id}
+        return render_template(
+            "soon.html",
+            title=persona.get("name", persona_id),
+            heading=persona.get("name", persona_id),
+            nav=persona_id,
+            persona=persona,
+        )
 
     return app
 

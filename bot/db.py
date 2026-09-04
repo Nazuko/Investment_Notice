@@ -29,6 +29,29 @@ CREATE TABLE IF NOT EXISTS alerts (
 
 CREATE INDEX IF NOT EXISTS idx_alerts_dedupe_sent
     ON alerts (dedupe_key, sent_at);
+
+CREATE TABLE IF NOT EXISTS daily_bars (
+    symbol TEXT NOT NULL,
+    d TEXT NOT NULL,
+    open REAL NOT NULL,
+    high REAL NOT NULL,
+    low REAL NOT NULL,
+    close REAL NOT NULL,
+    volume REAL NOT NULL,
+    turnover REAL NOT NULL,
+    PRIMARY KEY (symbol, d)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_bars_d ON daily_bars (d);
+
+CREATE TABLE IF NOT EXISTS screen_runs (
+    persona TEXT NOT NULL,
+    skill TEXT NOT NULL,
+    as_of TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (persona, skill)
+);
 """
 
 

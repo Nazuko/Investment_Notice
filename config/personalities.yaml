@@ -1,0 +1,33 @@
+personas:
+  worker:
+    name: 打工型
+    enabled: true
+    skills:
+      - id: strong_day
+        name: 強勢日風箏
+      - id: pullback_day
+        name: 拉回日風箏
+  office:
+    name: 上班族型
+    enabled: true
+    skills:
+      - id: week_trend
+        name: 週趨勢風箏
+      - id: strong_week
+        name: 強勢週風箏
+  boss:
+    name: 老闆型
+    enabled: true
+    skills:
+      - id: week_pullback
+        name: 週拉回風箏
+      - id: cheap_buy
+        name: 廉價收購
+  growth:
+    name: 成長型
+    enabled: false
+    skills: []
+  passive:
+    name: 被動型
+    enabled: false
+    skills: []

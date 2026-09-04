@@ -115,8 +115,35 @@ button {
   border: 1px solid var(--line);
   margin: 8px 0;
 }
-.flashes .ok { border-color: var(--up); color: var(--up); }
-.flashes .error { border-color: var(--down); color: var(--down); }
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 18px;
+}
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+}
+.site-nav a.active { color: var(--gold); border-bottom-color: var(--gold); }
+.site-nav a.muted { opacity: 0.55; }
+.tabs { display: flex; gap: 8px; margin: 12px 0 16px; }
+.tab {
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.tab.active {
+  background: var(--gold);
+  color: #1a1408;
+  border-color: var(--gold);
+}
 
 .picker-field { min-width: 220px; }
 .combo { position: relative; }

@@ -32,6 +32,8 @@ python -m bot web
 
 Then open `http://127.0.0.1:5000` in the Cursor Browser panel. Holdings and watchlist pickers search Taiwan listed/OTC names (代號 + 中文名稱). Tables show the Chinese name, with the Yahoo ticker underneath.
 
+Top nav opens personality pages (打工型 / 上班族型 / 老闆型), each with two skill tabs. 成長型 and 被動型 are placeholders until their SOP files are added. Click **更新盤後選股** to screen using yesterday's close and turnover (not intraday prices).
+
 Refresh the bundled catalog:
 
 ```bash
