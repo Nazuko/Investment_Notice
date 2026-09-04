@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block actions %}
+  <form method="post" action="{{ url_for('refresh_persona', persona_id=persona_id) }}">
+    <button type="submit" class="primary" id="refresh-screen">更新盤後選股</button>
+  </form>
+{% endblock %}
+{% block content %}
+  <p class="hint">
+    資料日期：<code>{{ as_of or '尚未更新' }}</code>
+    · 成值 = 昨收成交金額（盤後）
+    · 不使用盤中即時價
+  </p>
+  <div class="tabs">
+    {% for skill in skills %}
+      <a class="tab {% if skill.id == skill_id %}active{% endif %}"
+         href="{{ url_for('select_persona', persona_id=persona_id, skill=skill.id) }}">{{ skill.name }}</a>
+    {% endfor %}
+  </div>
+  <p class="hint">目前技能：{{ skill_name }} · 共 {{ rows|length }} 檔</p>
+  <table>
+    <thead>
+      <tr>
+        <th>標的</th>
+        <th>昨收</th>
+        <th>盤後成值</th>
+        <th>條件</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          <div class="name">{{ row.name }}</div>
+          <div class="code">{{ row.symbol }}</div>
+        </td>
+        <td>{{ '%.2f'|format(row.close) }}</td>
+        <td>{{ '%.0f'|format(row.turnover) }}</td>
+        <td>{{ row.reasons | join('、') }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">這個分頁目前沒有通過條件的標的。請先按「更新盤後選股」。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
