@@ -40,7 +40,13 @@ class DailyBar:
 
 
 def _http_get(url: str, timeout: int = 45) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "InvestmentNotice/0.1"})
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (compatible; InvestmentNotice/0.1)",
+            "Accept": "application/json,text/csv,*/*",
+        },
+    )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read()
 
@@ -536,34 +542,91 @@ def _fill_missing_history(store: BarStore, symbols: list[str], session: date | N
                     store.upsert_bars(symbol, hist)
 
 
+def _month_starts(months: int = 18) -> list[date]:
+    today = date.today()
+    y, m = today.year, today.month
+    out = []
+    for _ in range(months):
+        out.append(date(y, m, 1))
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return out
+
+
+def bars_from_twse_fmtqik(payload: dict) -> list[DailyBar]:
+    bars: list[DailyBar] = []
+    for row in payload.get("data") or []:
+        if len(row) < 5:
+            continue
+        bar_date = _parse_roc_or_iso(str(row[0]))
+        close = _num(str(row[4]))
+        if bar_date is None or close <= 0:
+            continue
+        bars.append(DailyBar(bar_date, close, close, close, close, 0.0, 0.0))
+    return bars
+
+
+def bars_from_tpex_st41(payload: dict) -> list[DailyBar]:
+    bars: list[DailyBar] = []
+    tables = payload.get("tables") or []
+    rows = []
+    if tables and isinstance(tables[0], dict):
+        rows = tables[0].get("data") or []
+    for row in rows:
+        if len(row) < 5:
+            continue
+        bar_date = _parse_roc_or_iso(str(row[0]))
+        close = _num(str(row[4]))
+        if bar_date is None or close <= 0:
+            continue
+        bars.append(DailyBar(bar_date, close, close, close, close, 0.0, 0.0))
+    return bars
+
+
+def fetch_twse_index_history() -> list[DailyBar]:
+    bars: list[DailyBar] = []
+    for start in _month_starts():
+        url = (
+            "https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK"
+            f"?response=json&date={start.strftime('%Y%m%d')}"
+        )
+        try:
+            payload = json.loads(_http_get(url).decode("utf-8-sig"))
+        except Exception:
+            continue
+        bars.extend(bars_from_twse_fmtqik(payload))
+    bars.sort(key=lambda b: b.date)
+    return bars
+
+
+def fetch_tpex_index_history() -> list[DailyBar]:
+    bars: list[DailyBar] = []
+    for start in _month_starts():
+        roc = f"{start.year - 1911}/{start.month:02d}"
+        url = (
+            "https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_index/"
+            f"st41_result.php?l=zh-tw&d={roc}&o=json"
+        )
+        try:
+            payload = json.loads(_decode_table(_http_get(url)))
+        except Exception:
+            continue
+        bars.extend(bars_from_tpex_st41(payload))
+    bars.sort(key=lambda b: b.date)
+    return bars
+
+
 def refresh_indices(store: BarStore, session: date | None) -> None:
-    tickers = []
-    mapping: dict[str, str] = {}
-    for symbol, yahoo in INDEX_YAHOO.items():
-        mapping[yahoo] = symbol
-        tickers.append(yahoo)
-    for yahoo in INDEX_YAHOO_FALLBACK.values():
-        if yahoo not in mapping:
-            tickers.append(yahoo)
-    batch = fetch_history_yfinance_batch(tickers)
-    for yahoo, symbol in INDEX_YAHOO.items():
-        hist = batch.get(yahoo) or []
-        if not hist and symbol in INDEX_YAHOO_FALLBACK:
-            hist = batch.get(INDEX_YAHOO_FALLBACK[symbol]) or []
-        if hist:
-            aligned = [
-                DailyBar(
-                    date=b.date,
-                    open=b.open,
-                    high=b.high,
-                    low=b.low,
-                    close=b.close,
-                    volume=b.volume,
-                    turnover=0.0,
-                )
-                for b in hist
-            ]
-            store.upsert_bars(symbol, aligned)
+    twse = fetch_twse_index_history()
+    if not twse:
+        twse = fetch_history_yfinance_batch(["^TWII"]).get("^TWII") or []
+    if twse:
+        store.upsert_bars(INDEX_TWSE, twse)
+    otc = fetch_tpex_index_history()
+    if otc:
+        store.upsert_bars(INDEX_TPEX, otc)
 
 
 def refresh_market(
