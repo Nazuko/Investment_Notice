@@ -6,7 +6,15 @@ from typing import Any
 import yaml
 
 from bot.config import CONFIG_DIR
-from bot.marketdata import BarStore, MIN_TURNOVER, refresh_market
+from bot.marketdata import (
+    INDEX_TPEX,
+    INDEX_TWSE,
+    BarStore,
+    MIN_TURNOVER,
+    priority_yahoo_symbols,
+    refresh_market,
+)
+from bot.mood import compute_mood, save_mood
 from bot.screener import evaluate_skill
 from bot.symbols import name_for
 
@@ -20,7 +28,8 @@ def load_personas(path: Path | None = None) -> dict[str, Any]:
 
 def run_skill(store: BarStore, persona: str, skill_id: str, *, refresh: bool = False) -> dict:
     if refresh:
-        as_of = refresh_market(store, fill_history=True)
+        as_of = refresh_market(store, fill_history=True, fill_indices=True)
+        save_mood(store, compute_mood(store))
     else:
         as_of = store.latest_date()
     if as_of is None:
@@ -38,13 +47,26 @@ def run_skill(store: BarStore, persona: str, skill_id: str, *, refresh: bool = F
             """,
             (as_of.isoformat(), MIN_TURNOVER),
         ).fetchall()
-    hits = []
+    symbols: list[str] = []
+    seen: set[str] = set()
+    skip = {INDEX_TWSE, INDEX_TPEX}
     for row in rows:
         symbol = row["symbol"]
+        if symbol in skip:
+            continue
+        symbols.append(symbol)
+        seen.add(symbol)
+    for extra in priority_yahoo_symbols():
+        if extra not in seen:
+            symbols.append(extra)
+            seen.add(extra)
+
+    hits = []
+    for symbol in symbols:
         history = store.history(symbol)
         if not history:
             continue
-        ok, reasons = evaluate_skill(skill_id, history)
+        ok, reasons, checks = evaluate_skill(skill_id, history)
         if not ok:
             continue
         last = history[-1]
@@ -56,6 +78,7 @@ def run_skill(store: BarStore, persona: str, skill_id: str, *, refresh: bool = F
                 "turnover": last.turnover,
                 "volume_lots": last.volume / 1000,
                 "reasons": reasons,
+                "checks": checks,
             }
         )
     hits.sort(key=lambda r: r["turnover"], reverse=True)

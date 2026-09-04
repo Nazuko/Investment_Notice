@@ -68,6 +68,19 @@ def weekly_bars(bars: list[DailyBar]) -> list[DailyBar]:
     return resample_last(bars, lambda d: d.isocalendar()[:2])
 
 
+def completed_weekly_bars(bars: list[DailyBar]) -> list[DailyBar]:
+    weeks = weekly_bars(bars)
+    if not weeks or not bars:
+        return weeks
+    last = bars[-1]
+    # 盤後 SOP：週還沒收完（最後一根不是週五）就不要把當週算進週 OSC。
+    if last.date.weekday() < 4:
+        last_week = last.date.isocalendar()[:2]
+        if weeks[-1].date.isocalendar()[:2] == last_week:
+            return weeks[:-1]
+    return weeks
+
+
 def monthly_bars(bars: list[DailyBar]) -> list[DailyBar]:
     return resample_last(bars, lambda d: (d.year, d.month))
 
@@ -232,12 +245,34 @@ def week_pullback(frame: Frame) -> tuple[bool, list[str]]:
     return all([ok_jump, ok_osc, ok_ma, ok_turn]), reasons
 
 
-def cheap_buy(frame: Frame) -> tuple[bool, list[str]]:
+@dataclass
+class Check:
+    id: str
+    label: str
+    ok: bool
+
+    def as_dict(self) -> dict:
+        return {"id": self.id, "label": self.label, "ok": self.ok}
+
+
+def price_band_or(close: float, ma120: float | None, ma20: float | None) -> tuple[bool, str]:
+    """課義「>120MA / <20MA」對齊另一個 App：兩種進場擇一即可。"""
+    over_120 = ma120 is not None and close > ma120
+    under_20 = ma20 is not None and close < ma20
+    if over_120 and under_20:
+        return True, "收盤>120MA且<20MA"
+    if over_120:
+        return True, "收盤>120MA"
+    if under_20:
+        return True, "收盤<20MA"
+    return False, "收盤>120MA或<20MA"
+
+
+def cheap_buy_checks(frame: Frame) -> list[Check]:
     last = frame.last()
-    reasons = []
     months = monthly_bars(frame.bars)
     ok_jump = monthly_jump(months, lookback=6, threshold=0.30)
-    week_osc = macd_osc([b.close for b in weekly_bars(frame.bars)])
+    week_osc = macd_osc([b.close for b in completed_weekly_bars(frame.bars)])
     ok_w = len(week_osc) >= 2 and week_osc[-1] < week_osc[-2]
     ma60_now = sma(frame.closes, 60)
     ma60_prev = sma(frame.closes[:-1], 60) if len(frame.closes) > 60 else None
@@ -248,24 +283,42 @@ def cheap_buy(frame: Frame) -> tuple[bool, list[str]]:
     )
     ma120 = sma(frame.closes, 120)
     ma20 = sma(frame.closes, 20)
-    ok_band = (
-        ma120 is not None
-        and ma20 is not None
-        and last.close > ma120
-        and last.close < ma20
-    )
+    ok_band, band_label = price_band_or(last.close, ma120, ma20)
     ok_turn = last.turnover > 100_000_000
-    if ok_jump:
-        reasons.append("6個月內單月>30%")
-    if ok_w:
-        reasons.append("週OSC往下")
-    if ok_ma60:
-        reasons.append("60MA仍向上")
-    if ok_band:
-        reasons.append("收盤>120MA且<20MA")
-    if ok_turn:
-        reasons.append("成值>1億")
-    return all([ok_jump, ok_w, ok_ma60, ok_band, ok_turn]), reasons
+    return [
+        Check("jump", "6個月內單月>30%", ok_jump),
+        Check("week_osc", "週OSC往下", ok_w),
+        Check("ma60", "60MA仍向上", ok_ma60),
+        Check("band", band_label if ok_band else "收盤>120MA或<20MA", ok_band),
+        Check("turnover", "成值>1億", ok_turn),
+    ]
+
+
+def _checks_pass(checks: list[Check]) -> bool:
+    return all(c.ok for c in checks)
+
+
+def cheap_buy_session_checks(frame: Frame) -> list[Check]:
+    """五條件 AND。若最新一根（常為當日未完成）沒過，改看前一盤後交易日。"""
+    current = cheap_buy_checks(frame)
+    if _checks_pass(current):
+        return current
+    if len(frame.bars) < 40:
+        return current
+    previous = cheap_buy_checks(Frame(frame.bars[:-1]))
+    if _checks_pass(previous):
+        tagged = [
+            Check(c.id, c.label if c.id != "turnover" else "成值>1億（昨收）", c.ok)
+            for c in previous
+        ]
+        return tagged
+    return current
+
+
+def cheap_buy(frame: Frame) -> tuple[bool, list[str]]:
+    checks = cheap_buy_session_checks(frame)
+    reasons = [c.label for c in checks if c.ok]
+    return _checks_pass(checks), reasons
 
 
 SKILLS = {
@@ -278,8 +331,16 @@ SKILLS = {
 }
 
 
-def evaluate_skill(skill_id: str, bars: list[DailyBar]) -> tuple[bool, list[str]]:
+def evaluate_skill(skill_id: str, bars: list[DailyBar]) -> tuple[bool, list[str], list[dict]]:
     fn = SKILLS[skill_id]
     if len(bars) < 30:
-        return False, []
-    return fn(Frame(bars))
+        return False, [], []
+    frame = Frame(bars)
+    if skill_id == "cheap_buy":
+        checks = cheap_buy_session_checks(frame)
+        payload = [c.as_dict() for c in checks]
+        reasons = [c.label for c in checks if c.ok]
+        return all(c.ok for c in checks), reasons, payload
+    ok, reasons = fn(frame)
+    payload = [{"id": r, "label": r, "ok": True} for r in reasons]
+    return ok, reasons, payload

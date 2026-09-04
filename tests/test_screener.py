@@ -94,6 +94,66 @@ def test_cheap_buy_rejects_without_history() -> None:
     assert reasons == [] or isinstance(reasons, list)
 
 
+def test_price_band_or_accepts_either_leg() -> None:
+    from bot.screener import price_band_or
+
+    both, label_both = price_band_or(110, 100, 120)
+    assert both is True
+    assert "120MA" in label_both and "20MA" in label_both
+    over_only, label_over = price_band_or(110, 100, 90)
+    assert over_only is True
+    assert label_over == "收盤>120MA"
+    under_only, label_under = price_band_or(80, 100, 90)
+    assert under_only is True
+    assert label_under == "收盤<20MA"
+    neither, _ = price_band_or(95, 100, 90)
+    assert neither is False
+
+
+def test_completed_week_drops_unfinished_week() -> None:
+    from bot.screener import completed_weekly_bars, weekly_bars
+
+    # 2024-01-02 is Tuesday; a Wednesday last bar should drop current ISO week.
+    bars = bars_from_closes([100, 101, 102, 103, 104, 105, 106, 107], start=date(2024, 1, 2))
+    full = weekly_bars(bars)
+    done = completed_weekly_bars(bars)
+    assert bars[-1].date.weekday() < 4
+    assert len(done) == len(full) - 1
+
+
+def test_cheap_buy_session_fallback_returns_five_checks() -> None:
+    from bot.screener import cheap_buy_session_checks
+
+    bars = bars_from_closes([100.0] * 50, volume=2_000_000)
+    checks = cheap_buy_session_checks(Frame(bars))
+    assert len(checks) == 5
+    assert {c.id for c in checks} == {"jump", "week_osc", "ma60", "band", "turnover"}
+
+
+def test_cheap_buy_checks_pass_when_only_above_120ma() -> None:
+    from bot.screener import cheap_buy_checks, sma
+
+    price = 80.0
+    closes: list[float] = []
+    for month in range(10):
+        if month == 4:
+            price *= 1.4
+        for _ in range(16):
+            price *= 1.003
+            closes.append(price)
+    frame = Frame(bars_from_closes(closes, volume=2_000_000))
+    ma120 = sma(frame.closes, 120)
+    ma20 = sma(frame.closes, 20)
+    assert ma120 is not None and ma20 is not None
+    assert frame.last().close > ma120
+    # Pullback not required: still above 20MA is OK.
+    assert frame.last().close > ma20
+    checks = {c.id: c.ok for c in cheap_buy_checks(frame)}
+    assert checks["band"] is True
+    assert checks["jump"] is True
+    assert checks["turnover"] is True
+
+
 def test_parse_twse_day_all_csv() -> None:
     from bot.marketdata import parse_twse_csv
 
@@ -110,3 +170,41 @@ def test_parse_twse_day_all_csv() -> None:
     bar = dict(rows)["2330.TW"]
     assert bar.close == 900
     assert bar.turnover == 18_000_000_000
+
+
+def test_parse_tpex_csv_with_header() -> None:
+    from bot.marketdata import parse_tpex_csv
+
+    raw = (
+        "115年09月03日上櫃股票每日收盤行情\n"
+        "代號,名稱,收盤,漲跌,開盤,最高,最低,均價,成交股數,成交金額\n"
+        "5351,鈺創,50.00,+1.00,49.00,51.00,48.00,50.00,2000000,100000000\n"
+        "0050,ETF,10,0,10,10,10,10,1,10\n"
+    ).encode("utf-8")
+    as_of, rows = parse_tpex_csv(raw)
+    assert as_of.isoformat() == "2026-09-03"
+    symbols = {s for s, _ in rows}
+    assert "5351.TWO" in symbols
+    assert "0050.TWO" not in symbols
+    bar = dict(rows)["5351.TWO"]
+    assert bar.close == 50
+    assert bar.turnover == 100_000_000
+
+
+def test_history_universe_includes_priority_and_full_turnover() -> None:
+    from bot.marketdata import DailyBar, PRIORITY_CODES, history_universe
+    from bot.symbols import lookup
+
+    as_of = date(2026, 9, 3)
+    quotes = {
+        "2330.TW": DailyBar(as_of, 900, 910, 890, 900, 1_000_000, 200_000_000),
+        "2303.TW": DailyBar(as_of, 50, 51, 49, 50, 1_000_000, 150_000_000),
+    }
+    uni = history_universe(quotes)
+    assert "2330.TW" in uni
+    assert "2303.TW" in uni
+    for code in PRIORITY_CODES:
+        item = lookup(code)
+        assert item is not None
+        assert item.yahoo in uni
+

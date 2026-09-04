@@ -17,6 +17,9 @@
       <form method="post" action="{{ url_for('run') }}">
         <button type="submit" class="primary" id="run-check">立即檢查訊號</button>
       </form>
+      <form method="post" action="{{ url_for('refresh_mood') }}">
+        <button type="submit" class="ghost" id="refresh-mood">更新風度</button>
+      </form>
       <form method="post" action="{{ url_for('reload_yaml') }}">
         <button type="submit" class="ghost">從 YAML 載入</button>
       </form>
@@ -39,6 +42,8 @@
       </ul>
     {% endif %}
   {% endwith %}
+
+  {% include "mood_card.html" %}
 
   <section>
     <h2>庫存與購入價</h2>

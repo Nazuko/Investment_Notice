@@ -10,6 +10,7 @@ from bot.config import database_path, load_settings
 from bot.engine import build_runtime, run_tick
 from bot.holdings import HoldingsStore
 from bot.marketdata import BarStore
+from bot.mood import load_mood, refresh_mood as refresh_mood_data
 from bot.personalities import load_personas, run_skill
 from bot.prices import PriceProvider, make_price_provider
 from bot.symbols import lookup, name_for, search as search_symbols
@@ -46,7 +47,11 @@ def create_app(
 
     @app.context_processor
     def inject_nav():
-        return {"personas": personas}
+        try:
+            mood = load_mood(bar_store)
+        except Exception:
+            mood = None
+        return {"personas": personas, "mood": mood}
 
     def _quotes(symbols: list[str]) -> dict[str, float | None]:
         out: dict[str, float | None] = {}
@@ -197,6 +202,16 @@ def create_app(
     def reload_yaml():
         store.import_yaml()
         flash("已從 holdings.yaml 重新載入。", "ok")
+        return redirect(url_for("index"))
+
+    @app.post("/mood/refresh")
+    def refresh_mood():
+        try:
+            payload = refresh_mood_data(bar_store, fill_history=False)
+            label = payload.get("cycle_label") or "風度"
+            flash(f"已更新風度：{label}（{payload.get('as_of') or '—'}）。", "ok")
+        except Exception as exc:
+            flash(f"更新風度失敗：{exc}", "error")
         return redirect(url_for("index"))
 
     @app.get("/select/<persona_id>")

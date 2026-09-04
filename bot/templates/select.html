@@ -5,6 +5,7 @@
   </form>
 {% endblock %}
 {% block content %}
+  {% include "mood_card.html" %}
   <p class="hint">
     資料日期：<code>{{ as_of or '尚未更新' }}</code>
     · 成值 = 昨收成交金額（盤後）
@@ -35,7 +36,17 @@
         </td>
         <td>{{ '%.2f'|format(row.close) }}</td>
         <td>{{ '%.0f'|format(row.turnover) }}</td>
-        <td>{{ row.reasons | join('、') }}</td>
+        <td>
+          {% if row.checks %}
+          <ul class="check-list">
+            {% for c in row.checks %}
+            <li class="{{ 'ok' if c.ok else 'no' }}">{{ '✓' if c.ok else '✗' }} {{ c.label }}</li>
+            {% endfor %}
+          </ul>
+          {% else %}
+            {{ row.reasons | join('、') }}
+          {% endif %}
+        </td>
       </tr>
       {% else %}
       <tr><td colspan="4" class="empty">這個分頁目前沒有通過條件的標的。請先按「更新盤後選股」。</td></tr>

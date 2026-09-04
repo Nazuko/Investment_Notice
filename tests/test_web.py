@@ -119,3 +119,51 @@ def test_personality_pages_and_tabs(tmp_path: Path) -> None:
     soon = client.get("/select/growth/soon")
     assert soon.status_code == 200
     assert "講義還沒放到".encode("utf-8") in soon.data
+
+
+def test_home_shows_mood_card(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    home = client.get("/")
+    assert home.status_code == 200
+    assert "目前風度".encode("utf-8") in home.data
+    assert "更新風度".encode("utf-8") in home.data
+    assert "風度尚未更新".encode("utf-8") in home.data
+
+
+def test_cheap_buy_screen_renders_checks(tmp_path: Path) -> None:
+    from datetime import date
+
+    from bot.marketdata import BarStore
+
+    client = _client(tmp_path)
+    db = tmp_path / "bot.db"
+    store = BarStore(db)
+    store.save_screen(
+        "boss",
+        "cheap_buy",
+        date(2026, 9, 3),
+        [
+            {
+                "symbol": "6446.TW",
+                "name": "藥華藥",
+                "close": 500.0,
+                "turnover": 800_000_000,
+                "volume_lots": 2000,
+                "reasons": ["6個月內單月>30%", "收盤>120MA"],
+                "checks": [
+                    {"id": "jump", "label": "6個月內單月>30%", "ok": True},
+                    {"id": "week_osc", "label": "週OSC往下", "ok": True},
+                    {"id": "ma60", "label": "60MA仍向上", "ok": True},
+                    {"id": "band", "label": "收盤>120MA", "ok": True},
+                    {"id": "turnover", "label": "成值>1億", "ok": True},
+                ],
+            }
+        ],
+    )
+    page = client.get("/select/boss?skill=cheap_buy")
+    assert page.status_code == 200
+    html = page.data.decode("utf-8")
+    assert "藥華藥" in html
+    assert "120MA" in html
+    assert "✓" in html
+

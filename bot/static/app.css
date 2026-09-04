@@ -171,3 +171,46 @@ button {
   background: #2a2418;
   color: var(--gold);
 }
+
+.mood-chip {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.mood-chip.mood-up { border-color: var(--up); color: var(--up); }
+.mood-chip.mood-down { border-color: var(--down); color: var(--down); }
+.mood-chip.mood-watch { border-color: var(--gold); color: var(--gold); }
+.mood-card {
+  margin: 18px 0 8px;
+  padding: 16px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.mood-card.mood-up { border-color: #3d6b52; }
+.mood-card.mood-down { border-color: #6b3d32; }
+.mood-title { margin: 4px 0 8px; font-size: 22px; }
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.mood-index {
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+.mood-index h3 { margin: 0 0 4px; font-size: 14px; color: var(--muted); }
+.mood-state { margin: 0; font-size: 18px; color: var(--gold); }
+.mood-price { margin: 8px 0 4px; font-size: 22px; }
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+.check-list li { margin: 2px 0; color: var(--muted); }
+.check-list li.ok { color: var(--up); }
+.check-list li.no { color: var(--down); }

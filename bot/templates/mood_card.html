@@ -1,0 +1,41 @@
+{% if mood %}
+<section class="mood-card mood-{{ mood.cycle }}" id="mood-card">
+  <div class="mood-head">
+    <div>
+      <p class="eyebrow">目前風度</p>
+      <h2 class="mood-title">{{ mood.cycle_label }}</h2>
+      <p class="hint">{{ mood.hint }}</p>
+      <p class="hint">資料日期：<code>{{ mood.as_of or '尚未更新' }}</code> · 依上市加權與櫃買指數日線（SMA20、MACD OSC）</p>
+    </div>
+  </div>
+  <div class="mood-grid">
+    {% for side in [mood.twse, mood.otc] %}
+    <article class="mood-index state-{{ side.state }}">
+      <h3>{{ side.name }}</h3>
+      <p class="mood-state">{{ side.state_label }}</p>
+      {% if side.close %}
+      <p class="mood-price">{{ '%.2f'|format(side.close) }}
+        {% if side.change_pct is not none %}
+          <span class="{{ 'up' if side.change_pct >= 0 else 'down' }}">
+            {{ '%+.2f'|format(side.change_pct * 100) }}%
+          </span>
+        {% endif %}
+      </p>
+      <p class="hint">SMA20 {{ '%.2f'|format(side.sma20) if side.sma20 else '—' }}
+        · OSC {{ '%.2f'|format(side.osc) if side.osc is not none else '—' }}
+        {{ '↑' if side.osc is not none and side.osc_prev is not none and side.osc > side.osc_prev else '↓' if side.osc is not none and side.osc_prev is not none else '' }}
+      </p>
+      {% else %}
+      <p class="hint">尚無指數K線，請更新風度。</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="mood-card mood-unknown" id="mood-card">
+  <p class="eyebrow">目前風度</p>
+  <h2 class="mood-title">風度尚未更新</h2>
+  <p class="hint">按「更新風度」抓取加權指數與櫃買指數日線後，會依 SMA20 與 MACD OSC 判斷強風／亂流／無風／陣風。</p>
+</section>
+{% endif %}
